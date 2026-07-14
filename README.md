@@ -1,220 +1,205 @@
+<div align="center">
+
 # ChronoGeoLab
 
-A geospatial analysis platform built with [deck.gl](https://deck.gl/) for space-time trajectory analysis. Upload CSV data, run analysis tools in the browser or on an optional server, and visualize results on an interactive map.
+**An open toolkit for time‑geographic visualization, space‑time analysis, and mobility‑based exposure research.**
 
-📖 **[Documentation site →](https://wyzdevin.github.io/ChronoGeoLab/)** (source in [`docs/`](docs/))
+Upload trajectory data, run space‑time analyses in your browser, and explore the results on an interactive 3D map — no coding required.
 
-The platform ships four analysis tools -- 3D Trajectory, Space-Time Kernel Density (STKDE), Space-Time Cube, and Space-Time Prism -- running client-side or on the optional geopandas backend, depending on each tool's execution policy.
+[![Documentation](https://img.shields.io/badge/docs-online-2563eb)](https://wyzdevin.github.io/ChronoGeoLab/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-eab308.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-16a34a)](https://github.com/WYZDevin/ChronoGeoLab/releases)
+[![Built with deck.gl](https://img.shields.io/badge/built%20with-deck.gl-000000)](https://deck.gl/)
 
-## Architecture
+📖 [Documentation](https://wyzdevin.github.io/ChronoGeoLab/) · 🚀 [Getting Started](https://wyzdevin.github.io/ChronoGeoLab/guide/getting-started) · 🧭 [Tools](https://wyzdevin.github.io/ChronoGeoLab/tools/)
+
+<img src="docs/public/screenshots/3d-trajectory.png" alt="A 3D space-time trajectory rendered in ChronoGeoLab" width="90%">
+
+</div>
+
+---
+
+## What is ChronoGeoLab?
+
+ChronoGeoLab turns raw movement data (GPS traces as **CSV** or **GeoJSON**) into
+interpretable time‑geography visualizations. It's built for researchers, students,
+and analysts studying human mobility, activity spaces, and environmental exposure:
+bring a trajectory, pick a tool, and read the result on an interactive 3D map.
+
+The app runs locally in your browser, backed by an optional Python service for
+heavier server‑side computation. The recommended Docker setup starts both together
+with a single command.
+
+## Features
+
+| Tool | What it shows |
+|------|---------------|
+| **3D Trajectory** | A person's path drawn as a 3D ribbon — space on the map, time rising along the vertical axis. |
+| **Space‑Time Prism** | Everywhere someone *could* have been between two known stops, given a travel‑speed and time budget — the classic time‑geography "prism". |
+| **Space‑Time KDE (STKDE)** | Activity hotspots in space *and* time, via space‑time kernel density estimation. |
+| **Space‑Time Cube** | Trajectory points aggregated into 3D space‑time bins to reveal patterns. |
+
+Also included: geometry helpers — **Buffer**, **Union**, and **Intersection** — for
+shaping and combining study areas.
+
+## Getting Started
+
+The fastest way to run ChronoGeoLab is with Docker, which launches the map interface
+and the analysis backend together.
+
+### 1. Install Docker Desktop
+
+Install [Docker Desktop](https://docs.docker.com/get-docker/) (Compose v2 included).
+It's the only prerequisite for running the app.
+
+> **Not comfortable with the command line?** You don't need it. The
+> [Getting Started guide](https://wyzdevin.github.io/ChronoGeoLab/guide/getting-started)
+> walks you through installing and running ChronoGeoLab entirely from the **Docker
+> Desktop UI** (Option A — no terminal). Follow that, then jump to
+> [Step 3](#3-run-your-first-analysis) below.
+
+### 2. Start the app
+
+From the project root:
+
+```bash
+docker compose up --build
+```
+
+When the build finishes, open **http://localhost:5173**. The backend runs on
+`http://localhost:8000` and is wired up automatically. Stop everything with:
+
+```bash
+docker compose down
+```
+
+### 3. Run your first analysis
+
+1. **Upload data.** Click **Upload** and choose a bundled sample —
+   [`demo-datasets/individual/example_1.csv`](demo-datasets/individual/example_1.csv)
+   (one real person's day, ~800 GPS points). ChronoGeoLab auto‑detects the
+   longitude, latitude, altitude, and time columns, so there's nothing to map.
+2. **Visualize the path.** Pick **3D Trajectory** and run it — the day's route
+   rises into a 3D ribbon you can orbit, pan, and zoom.
+3. **Build a Space‑Time Prism.** Select a home anchor and an end anchor, set a
+   travel speed, and run it to see the reachable area between the two stops.
+
+<div align="center">
+<img src="docs/public/getting-started/visualized-trajectory.png" alt="A visualized 3D trajectory" width="49%">
+<img src="docs/public/getting-started/stp-result.png" alt="A space-time prism result" width="49%">
+</div>
+
+📖 Full step‑by‑step walkthrough with screenshots: **[Getting Started →](https://wyzdevin.github.io/ChronoGeoLab/guide/getting-started)**
+
+## Bring your own data
+
+ChronoGeoLab reads **CSV** and **GeoJSON**. Only two fields are required; the rest
+are optional and unlock more tools:
+
+| Field | Required | Notes |
+|-------|:--------:|-------|
+| **Location** | ✅ | `longitude` + `latitude` columns (CSV) or a GeoJSON `Point`. `altitude` is used when present. |
+| **Timestamp** | ✅ | Unix seconds or an ISO date‑time column. |
+| User / trajectory ID | — | Keeps multiple people or tracks separate instead of merging them. |
+| Stay / place label | — | Groups points by activity (home, work, a visit). |
+| Environmental value | — | Exposure readings such as noise, pollution, or temperature. |
+
+Columns are auto‑detected on upload. See
+[Preparing Your Data](https://wyzdevin.github.io/ChronoGeoLab/guide/data-format) for
+the full format reference, and [`demo-datasets/`](demo-datasets/) for more samples
+(individual days and a 30‑user synthetic set).
+
+## Run locally (development)
+
+Requires **Node.js** (version pinned in `package.json`), **Python ≥ 3.12**, and
+[**uv**](https://docs.astral.sh/uv/getting-started/installation/).
+
+**Frontend**
+
+```bash
+cd app/front-end
+cp ../../.env.example .env     # optional: set VITE_MAPBOX_API_KEY for the satellite basemap
+npm install
+npm run dev                    # Vite dev server → http://localhost:5173
+```
+
+**Backend** (optional — enables server‑side execution for heavier runs)
+
+```bash
+cd app/back-end
+uv sync                                # install dependencies
+uv run flask --app app run -p 8000     # start Flask → http://localhost:8000
+uv run pytest tests/                   # run the test suite
+```
+
+The frontend detects the backend via `/api/v1/health` and enables server‑side
+execution when it's available.
+
+<details>
+<summary><b>Architecture &amp; tech stack</b></summary>
 
 ```mermaid
 flowchart TD
     subgraph Frontend ["Frontend (React + deck.gl)"]
-        CSV["CSV Upload"] --> Redux["Redux Store\n(data-slice)"]
-        Redux --> ToolSelect["User selects tool"]
-        ToolSelect --> Resolver["ExecutionResolver\nfrontend registry + backend health\n+ backend tools"]
-
-        Resolver -->|frontend mode| FE["tool.analyze()\n(Turf.js / Web Worker)"]
-        Resolver -->|backend mode| API["backendApiService\nHTTP POST"]
-
-        FE --> Results["AnalysisResult\n(FeatureCollection[])"]
-        API --> Norm["backend-normalizer\nfield remap + layer config"]
-        Norm --> Results
-        Results --> DeckMap["deck.gl + maplibre\nmap visualization"]
+        CSV["CSV / GeoJSON upload"] --> Resolver["ExecutionResolver"]
+        Resolver -->|frontend| FE["tool.analyze() (Turf.js / Web Worker)"]
+        Resolver -->|backend| API["backendApiService (HTTP)"]
+        FE --> Results["AnalysisResult"]
+        API --> Norm["backend-normalizer"] --> Results
+        Results --> DeckMap["deck.gl + maplibre map"]
     end
-
     subgraph Backend ["Backend (Flask API)"]
-        Flask["/api/v1/tools/:id/execute"] --> Tool["tool.execute()\n(geopandas + shapely)"]
-        Tool --> GeoJSON["GeoJSON response\n+ runMeta"]
+        Flask["/api/v1/tools/:id/execute"] --> Tool["tool.execute() (geopandas + shapely)"]
+        Tool --> GeoJSON["GeoJSON + runMeta"]
     end
-
-    API -->|"POST /api/v1/tools/:id/execute"| Flask
+    API -->|POST| Flask
     GeoJSON -->|JSON| Norm
 ```
 
-## Tech Stack
+| Layer | Technology |
+|-------|-----------|
+| UI | React 18 + TypeScript, Vite 6, Tailwind CSS 4, Radix UI / shadcn/ui |
+| Map | deck.gl 9, react‑map‑gl 7, maplibre‑gl 4 |
+| State | Redux Toolkit |
+| Geospatial (browser) | Turf.js 7 |
+| Backend | Flask 3, geopandas 1.x, Shapely 2, SciPy |
+| Tooling (Python) | uv |
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| UI Framework | React 18 + TypeScript | Component architecture |
-| Bundler | Vite 6 | Dev server and production builds |
-| Map Engine | deck.gl 9, react-map-gl 7, maplibre-gl 4 | WebGL geospatial visualization |
-| State | Redux Toolkit | Centralized app state |
-| Geospatial (browser) | Turf.js 7 | Client-side spatial analysis |
-| Styling | Tailwind CSS 4 | Utility-first CSS |
-| UI Primitives | Radix UI + shadcn/ui | Accessible component library |
-| Backend Framework | Flask 3 | Stateless REST API |
-| Geospatial (server) | geopandas 1.x + Shapely 2 | Server-side spatial analysis |
-| Statistics | SciPy 1.12+ | Kernel density estimation, spatial stats |
-| Package Manager (Python) | uv | Fast dependency resolution |
+Full details: [Architecture reference](https://wyzdevin.github.io/ChronoGeoLab/reference/architecture)
+· [API reference](https://wyzdevin.github.io/ChronoGeoLab/reference/api)
+· [Deployment](https://wyzdevin.github.io/ChronoGeoLab/reference/deployment).
+Deploying to Docker Hub is covered in [DEPLOY.md](DEPLOY.md).
 
-## Quick Start
+</details>
 
-### Run with Docker (recommended)
+## Documentation
 
-The whole stack (Flask backend + Nginx-served frontend) runs with one command — only [Docker](https://docs.docker.com/get-docker/) with Compose v2 is required:
+The full documentation site lives at **[wyzdevin.github.io/ChronoGeoLab](https://wyzdevin.github.io/ChronoGeoLab/)** (source in [`docs/`](docs/)):
 
-```bash
-docker compose up --build      # builds both images and starts them
+- [Getting Started](https://wyzdevin.github.io/ChronoGeoLab/guide/getting-started) — install and run your first analysis
+- [Preparing Your Data](https://wyzdevin.github.io/ChronoGeoLab/guide/data-format) — supported formats and fields
+- [Tools](https://wyzdevin.github.io/ChronoGeoLab/tools/) — each tool, its parameters, and the algorithm behind it
+- [Architecture](https://wyzdevin.github.io/ChronoGeoLab/reference/architecture) & [API](https://wyzdevin.github.io/ChronoGeoLab/reference/api) — for developers
+
+## Citation
+
+If you use ChronoGeoLab in your research, teaching, publications, presentations, or
+derivative software, please cite it (see [`CITATION.cff`](CITATION.cff)):
+
+```bibtex
+@software{wu_wang_2026_chronogeolab,
+  author  = {Wu, Devin Yongzhao and Wang, Jue},
+  title   = {ChronoGeoLab: An open toolkit for time-geographic visualization,
+             space-time analysis, and mobility-based exposure research},
+  version = {1.0.0},
+  year    = {2026},
+  note    = {Computer software},
+  url     = {https://github.com/WYZDevin/ChronoGeoLab/}
+}
 ```
 
-Then open **http://localhost:5173**. The backend is on **http://localhost:8000** and the frontend is wired to it automatically.
+## Credits & License
 
-```bash
-docker compose down            # stop and remove the containers
-```
-
-> The frontend bakes `VITE_BACKEND_URL` at build time (default `http://localhost:8000`). To target a different backend, edit the `args` under the `frontend` service in `docker-compose.yml` and rebuild.
-
-To run from pre-built images instead of building locally, use `docker-compose.prod.yml`:
-
-```bash
-docker compose -f docker-compose.prod.yml up    # pulls images, no local build
-```
-
-The image namespace and tag are configurable via `IMAGE_NAMESPACE` (default `yongzwu`) and `IMAGE_TAG` (default `latest`).
-
-### Publish to Docker Hub
-
-See **[DEPLOY.md](DEPLOY.md)** for building and pushing the frontend + backend images to Docker Hub — both via the `scripts/docker-publish.sh` helper and the automated GitHub Actions workflow.
-
-### Prerequisites (manual / dev mode)
-
-- **Node.js** (see `volta` config in `package.json` for pinned version)
-- **Python >= 3.12**
-- **uv** ([install guide](https://docs.astral.sh/uv/getting-started/installation/))
-
-### Frontend
-
-```bash
-cd app/front-end
-cp ../../.env.example .env        # configure environment
-npm install
-npm run dev                       # Vite dev server on http://localhost:5173
-```
-
-The frontend works fully offline. All tools have browser implementations or are gracefully disabled when the backend is unavailable.
-
-### Backend (optional)
-
-```bash
-cd app/back-end
-uv sync                              # install dependencies
-uv run flask --app app run -p 8000   # start Flask on http://localhost:8000
-```
-
-When the backend is running, the frontend detects it via `/api/v1/health` and enables server-side execution for hybrid tools.
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_APP_MODE` | `frontend` | Application mode |
-| `VITE_BACKEND_URL` | `http://localhost:8000` | Flask backend URL |
-
-## API Endpoints
-
-All endpoints are prefixed with `/api/v1`.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check. Returns `{ "status": "healthy", "version": "1.0.0" }` |
-| `GET` | `/tools` | List registered tools with id, name, description, version, and executionPolicy |
-| `POST` | `/tools/{toolId}/execute` | Execute a tool. Body: `{ data, options, attributes, sourceDatasetIds }`. Returns GeoJSON `FeatureCollection[]` with `runMeta` |
-
-Error responses return HTTP 400/404 with `{ "success": false, "error": "...", "outputs": [] }`.
-
-## Tools
-
-| ID | Name | Policy | Description |
-|----|------|--------|-------------|
-| `stkde` | Space-Time KDE | `hybrid` | Space-time kernel density estimation |
-| `time-geography` | Time Geography | `hybrid` | Space-time prisms and potential path areas |
-| `space-time-cube` | Space-Time Cube | `hybrid` | Aggregate trajectory points into 3D bins |
-| `buffer` | Buffer | `hybrid` | Generate buffer zones around features |
-| `union` | Union | `hybrid` | Merge overlapping geometries |
-| `intersection` | Intersection | `hybrid` | Compute geometric intersections |
-| `space-time-prism` | Space-Time Prism | `hybrid` | Compute space-time prisms for movement constraints |
-
-**Execution policies:**
-- `frontend_only` -- runs exclusively in the browser
-- `backend_only` -- requires the Flask backend
-- `hybrid` -- can run in either mode; the user selects via a mode toggle
-
-## Project Structure
-
-```
-ChronoGeoLab/
-├── .env.example                          # Environment variable template
-├── CLAUDE.md                             # Root-level AI coding instructions
-├── app/
-│   ├── front-end/
-│   │   ├── src/
-│   │   │   ├── components/               # React components (UI, workflow, panels)
-│   │   │   ├── contexts/                 # React contexts (app state, color schemes)
-│   │   │   ├── data-processors/          # Output post-processing (e.g. STKDE)
-│   │   │   ├── hooks/                    # Custom hooks (backend init, keyboard shortcuts)
-│   │   │   ├── interfaces/               # TypeScript types (SimpleTool, GeoJSON, etc.)
-│   │   │   ├── lib/                      # Shared utilities
-│   │   │   ├── services/                 # Execution layer
-│   │   │   │   ├── analysis-engine.ts    #   Entry point for all tool runs
-│   │   │   │   ├── backend-api-service.ts#   HTTP client for Flask API
-│   │   │   │   ├── backend-normalizer.ts #   Backend response → frontend format
-│   │   │   │   └── execution-resolver.ts #   Determines available execution modes
-│   │   │   ├── stores/                   # Redux slices (data, settings, workflow)
-│   │   │   ├── tools/                    # Tool implementations (SimpleTool classes)
-│   │   │   ├── utils/                    # Constants, tool registry, data helpers
-│   │   │   └── visualization-templates/  # deck.gl layer config templates per tool
-│   │   ├── package.json
-│   │   ├── vite.config.ts
-│   │   └── tsconfig.json
-│   └── back-end/
-│       ├── app/
-│       │   ├── __init__.py               # Flask app factory (create_app)
-│       │   ├── routes.py                 # API blueprint (/api/v1)
-│       │   ├── tool_registry.py          # Singleton tool registry
-│       │   ├── utils.py                  # GeoJSON <-> GeoDataFrame converters
-│       │   ├── constants.py              # Shared constants
-│       │   └── tools/                    # Tool implementations (BaseTool subclasses)
-│       │       ├── base.py               #   Abstract base class
-│       │       ├── stkde.py
-│       │       ├── time_geography.py
-│       │       ├── space_time_cube.py
-│       │       ├── buffer.py
-│       │       ├── union.py
-│       │       └── intersection.py
-│       ├── tests/                        # pytest test suite
-│       └── pyproject.toml
-```
-
-## Development
-
-### Frontend
-
-```bash
-cd app/front-end
-npm run dev          # Start dev server with HMR
-npm run build        # Type-check (tsc) then bundle (Vite)
-npm run lint         # ESLint
-npm run preview      # Preview production build locally
-```
-
-### Backend
-
-```bash
-cd app/back-end
-uv sync                              # Install / update dependencies
-uv run flask --app app run -p 8000   # Start dev server
-uv run pytest tests/                 # Run test suite
-```
-
-### Adding a New Tool
-
-1. **Frontend:** Create `src/tools/<name>-tool.ts` implementing `SimpleTool`, set `executionPolicy` in `capabilities`, register in `src/tools/index.ts`, and add a normalizer case in `backend-normalizer.ts` if the tool supports backend execution.
-2. **Backend:** Create `app/tools/<name>.py` subclassing `BaseTool`, implement `execute()`, and register in `app/tool_registry.py`.
-3. **Both:** Keep the API contract in sync between the two codebases.
-
-## License
+Developed by **[GISPark Lab](https://juewang.space/#GISPARKLAB)** — Devin Yongzhao Wu and Jue Wang.
 
 Released under the [MIT License](LICENSE). Copyright © 2026 Devin Yongzhao Wu and Jue Wang.
