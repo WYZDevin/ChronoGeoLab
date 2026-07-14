@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: app/back-end
+    image: ${IMAGE_NAMESPACE:-yongzwu}/chronogeolab-backend:${IMAGE_TAG:-latest}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: app/front-end
+      args:
+        # Baked into the bundle at build time. Override via shell env or a .env
+        # file next to this compose file, then rebuild.
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:8000}
+    image: ${IMAGE_NAMESPACE:-yongzwu}/chronogeolab-frontend:${IMAGE_TAG:-latest}
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy

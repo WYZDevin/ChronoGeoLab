@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: >-
+  If you use ChronoGeoLab in your research, teaching, publications,
+  presentations, or derivative software, please cite it as below.
+title: >-
+  ChronoGeoLab: An open toolkit for time-geographic visualization,
+  space-time analysis, and mobility-based exposure research
+type: software
+authors:
+  - family-names: Wu
+    given-names: Devin Yongzhao
+    affiliation: GISPark Lab
+  - family-names: Wang
+    given-names: Jue
+    affiliation: GISPark Lab
+version: 1.0.0
+date-released: '2026-07-14'
+license: MIT
+repository-code: 'https://github.com/WYZDevin/ChronoGeoLab'
+url: 'https://github.com/WYZDevin/ChronoGeoLab'

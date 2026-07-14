@@ -1,0 +1,55 @@
+[project]
+name = "chronogeolab-backend"
+version = "1.0.0"
+description = "Stateless Flask API for space-time geospatial analysis tools"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.0",
+    "flask-cors>=4.0",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "numpy>=1.26",
+    "scipy>=1.12",
+    "pyproj>=3.6",
+    "pydantic>=2.0",
+    "h3>=3.7",
+    "gunicorn>=21.0",
+    "requests>=2.32",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.pylint.main]
+# Only enforce file-length; all other pylint checks are handled by ruff.
+disable = "all"
+enable = ["C0302"]   # too-many-lines
+
+[tool.pylint.design]
+max-module-lines = 600
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pylint>=4.0.5",
+    "pytest>=9.0.2",
+]

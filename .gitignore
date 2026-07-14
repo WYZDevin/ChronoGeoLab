@@ -1,0 +1,78 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# VitePress docs build artifacts
+docs/.vitepress/dist
+docs/.vitepress/cache
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.uv-cache/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# App-level test artifacts
+app/front-end/test-results/
+app/front-end/playwright-report/
+
+# Local data / scratch artifacts (kept on disk, never committed)
+/2026.01.01-2026.12.31.csv
+/all_trajectories.geojson
+/example_day_2022-09-16.geojson
+/example_full_2.geojson
+/noise_environment_2022-09-16.geojson
+/road_network_example/
+/utm_to_airport_road_network_buffers/
+/utm_to_airport_road_network_buffers_500m/
+/OVERVIEW.md
+/OVERVIEW.pdf
+/SLIDES.md
+
+# AI / editor tooling — kept on disk, out of the public repo (covers .claude/worktrees/)
+.agent/
+.serena/
+.claude/
+.claude-plugin/
+
+# Internal docs — kept on disk, out of the public repo
+internal-docs/
