@@ -60,6 +60,7 @@ export default defineConfig({
             { text: 'What is it?', link: '/guide/introduction' },
             { text: 'Core Concepts', link: '/guide/concepts' },
             { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: '快速上手 (中文)', link: '/guide/getting-started.zh' },
           ],
         },
         {

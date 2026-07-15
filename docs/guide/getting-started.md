@@ -1,5 +1,7 @@
 # Getting Started
 
+English | [简体中文](./getting-started.zh.md)
+
 This guide goes from a fresh computer to a first space-time analysis. The
 easiest setup uses **Docker Desktop**, which runs the frontend and backend for
 you — no Python, Node.js, or GIS install required.

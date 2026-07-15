@@ -13,6 +13,8 @@ Upload trajectory data, run space‑time analyses in your browser, and explore t
 
 📖 [Documentation](https://wyzdevin.github.io/ChronoGeoLab/) · 🚀 [Getting Started](https://wyzdevin.github.io/ChronoGeoLab/guide/getting-started) · 🧭 [Tools](https://wyzdevin.github.io/ChronoGeoLab/tools/)
 
+English | [简体中文](README.zh-CN.md)
+
 <img src="docs/public/screenshots/3d-trajectory.png" alt="A 3D space-time trajectory rendered in ChronoGeoLab" width="90%">
 
 </div>
@@ -38,9 +40,6 @@ with a single command.
 | **Space‑Time Prism** | Everywhere someone *could* have been between two known stops, given a travel‑speed and time budget — the classic time‑geography "prism". |
 | **Space‑Time KDE (STKDE)** | Activity hotspots in space *and* time, via space‑time kernel density estimation. |
 | **Space‑Time Cube** | Trajectory points aggregated into 3D space‑time bins to reveal patterns. |
-
-Also included: geometry helpers — **Buffer**, **Union**, and **Intersection** — for
-shaping and combining study areas.
 
 ## Getting Started
 
