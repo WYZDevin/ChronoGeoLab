@@ -1,0 +1,63 @@
+name: New tool proposal
+description: Propose a new analysis tool for ChronoGeoLab
+title: "[Tool] "
+labels: ["enhancement", "new-tool"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a tool! This form captures what the implementation
+        playbook (`docs/contributing/adding-a-tool.md`) needs. Fields marked
+        optional can be worked out later.
+  - type: input
+    id: tool-name
+    attributes:
+      label: Tool name
+      placeholder: e.g. Space-Time Kernel Density Estimation
+    validations:
+      required: true
+  - type: input
+    id: tool-id
+    attributes:
+      label: Tool ID
+      description: Kebab-case, used identically in both registries.
+      placeholder: e.g. stkde
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What does it compute?
+      description: The analysis method, expected inputs (geometry types, required attributes like a time field), and outputs (what layers should appear on the map).
+    validations:
+      required: true
+  - type: dropdown
+    id: execution-policy
+    attributes:
+      label: Execution policy
+      description: Where should it run? See `docs/contributing/adding-a-tool.md`.
+      options:
+        - frontend_only (browser)
+        - backend_only (Flask)
+        - hybrid (both)
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: User-facing options (optional)
+      description: Parameters the UI should expose (name, type, default, range).
+      placeholder: |
+        - bandwidth (number, meters, default 100)
+        - timeSlices (integer, default 10)
+  - type: textarea
+    id: references
+    attributes:
+      label: Algorithm reference (optional)
+      description: Paper, textbook, or existing implementation describing the method.
+  - type: textarea
+    id: sample-data
+    attributes:
+      label: Sample data (optional)
+      description: A small dataset (or a pointer to one in `demo-datasets/`) that exercises the tool.

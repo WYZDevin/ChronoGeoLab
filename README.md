@@ -180,6 +180,33 @@ The full documentation site lives at **[wyzdevin.github.io/ChronoGeoLab](https:/
 - [Preparing Your Data](https://wyzdevin.github.io/ChronoGeoLab/guide/data-format) — supported formats and fields
 - [Tools](https://wyzdevin.github.io/ChronoGeoLab/tools/) — each tool, its parameters, and the algorithm behind it
 - [Architecture](https://wyzdevin.github.io/ChronoGeoLab/reference/architecture) & [API](https://wyzdevin.github.io/ChronoGeoLab/reference/api) — for developers
+- [Contributing](https://wyzdevin.github.io/ChronoGeoLab/contributing/) — how to contribute, with or without an AI agent
+
+## Contributing
+
+Contributions are welcome — from humans and AI coding agents alike. Start with
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, validation, and PR
+expectations.
+
+### Using AI for contribution
+
+ChronoGeoLab follows the [AGENTS.md](https://agents.md) standard, so most
+coding agents pick up the project rules automatically:
+
+- **Codex, Cursor, Copilot coding agent, Jules, and most others** read
+  [`AGENTS.md`](AGENTS.md) and the nested guides in
+  [`app/front-end/`](app/front-end/AGENTS.md) and
+  [`app/back-end/`](app/back-end/AGENTS.md) on their own — no setup needed.
+- **Claude Code** reads `CLAUDE.md`, which imports `AGENTS.md`.
+- **Any other agent** — start your session with:
+  *"Read `AGENTS.md` and the nested `AGENTS.md` files before making changes."*
+
+Each `AGENTS.md` is a table of contents: the hard rules up front, then
+pointers to everything an agent needs — including the step-by-step playbook
+for [adding or updating an analysis tool](https://wyzdevin.github.io/ChronoGeoLab/contributing/adding-a-tool).
+
+You are responsible for what your agent produces: review the diff, run the
+validation checks, and fill in the PR template honestly.
 
 ## Citation
 

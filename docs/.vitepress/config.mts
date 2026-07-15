@@ -31,6 +31,11 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/introduction', activeMatch: '/guide/' },
       { text: 'Tools', link: '/tools/', activeMatch: '/tools/' },
       { text: 'Reference', link: '/reference/api', activeMatch: '/reference/' },
+      {
+        text: 'Contributing',
+        link: '/contributing/',
+        activeMatch: '/contributing/',
+      },
       { text: 'About', link: '/about', activeMatch: '/about' },
       {
         text: 'v1.0.0',
@@ -101,6 +106,15 @@ export default defineConfig({
             { text: 'Architecture', link: '/reference/architecture' },
             { text: 'Backend API', link: '/reference/api' },
             { text: 'Deployment', link: '/reference/deployment' },
+          ],
+        },
+      ],
+      '/contributing/': [
+        {
+          text: 'Contributing',
+          items: [
+            { text: 'Overview', link: '/contributing/' },
+            { text: 'Adding or Updating a Tool', link: '/contributing/adding-a-tool' },
           ],
         },
       ],

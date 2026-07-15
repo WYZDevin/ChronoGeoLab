@@ -68,10 +68,14 @@ app/front-end/playwright-report/
 /OVERVIEW.pdf
 /SLIDES.md
 
-# AI / editor tooling — kept on disk, out of the public repo (covers .claude/worktrees/)
-.agent/
+# AI / editor tooling — local pieces stay out of the public repo
+# (.agent/rules, .claude settings/worktrees), but shared agent docs are
+# committed: .agent/skills/ and .claude/commands/.
+.agent/*
+!.agent/skills/
 .serena/
-.claude/
+.claude/*
+!.claude/commands/
 .claude-plugin/
 
 # Internal docs — kept on disk, out of the public repo
