@@ -18,14 +18,18 @@ from datetime import UTC, datetime
 
 import geopandas as gpd
 import numpy as np
-from shapely.geometry import Polygon
+from shapely.geometry import Point, Polygon
 
 from typing import Any
 
 from app.models import AttributeMapping, STKDEOptions
-from ..constants import PROCESSED_HEIGHT_FIELD
+from ..constants import (
+    PROCESSED_HEIGHT_FIELD,
+    PROCESSED_NEIGHBORS_FIELD,
+    PROCESSED_TIME_FIELD,
+)
 from .base import BaseTool
-from .time_geography import _parse_timestamps
+from .time_geography import _color_for_user_index, _parse_timestamps
 from .time_slicing import parse_anchor_seconds, slice_edges
 
 STKDE_Z_AXIS_FIELD = "z_axis"
@@ -73,6 +77,87 @@ def _calculate_optimal_z_height(
     """Match frontend ToolUtils.calculateOptimalZAxisHeight."""
     spatial_extent = max(max_lng - min_lng, max_lat - min_lat, 1e-15)
     return max(spatial_extent * 111_000 * 0.5, 1000.0)
+
+
+def _build_stkde_trajectory_overlay(
+    pts: gpd.GeoDataFrame,
+    x: np.ndarray,
+    y: np.ndarray,
+    t_epoch_ms: np.ndarray,
+    t_seconds: np.ndarray,
+    t_min_ms: int,
+    user_field: str,
+    align: bool,
+    total_height: float,
+    time_edges_s: np.ndarray,
+) -> gpd.GeoDataFrame:
+    """Build a trajectory overlay in the same visual Z space as the STKDE grid."""
+    n = len(pts)
+    has_user = bool(user_field) and user_field in pts.columns
+    user_ids = pts[user_field].fillna("unknown").astype(str).values if has_user else None
+
+    if user_ids is not None:
+        order = np.lexsort((t_seconds, user_ids))
+    else:
+        order = np.argsort(t_seconds)
+
+    if len(time_edges_s) < 2:
+        t_min_s = float(np.min(t_seconds))
+        time_edges_s = np.array([t_min_s, t_min_s + 1.0], dtype=np.float64)
+    z_edges = np.linspace(0.0, total_height, len(time_edges_s))
+    z_values = np.interp(t_seconds, time_edges_s, z_edges)
+    z_values = np.clip(z_values, 0.0, total_height)
+
+    display_timestamps = (
+        t_min_ms + np.rint(t_seconds * 1000.0).astype(np.int64)
+        if align
+        else t_epoch_ms.astype(np.int64)
+    )
+    time_progress = z_values / total_height if total_height > 0 else np.zeros(n, dtype=np.float64)
+
+    result = pts.iloc[order].copy().reset_index(drop=True)
+    ordered_x = x[order]
+    ordered_y = y[order]
+    ordered_z = z_values[order]
+    result = result.set_geometry(
+        [Point(px, py, pz) for px, py, pz in zip(ordered_x, ordered_y, ordered_z)]
+    )
+
+    ordered_users = user_ids[order] if user_ids is not None else None
+    neighbors: list[list[int]] = []
+    for i in range(n):
+        nb = []
+        if i > 0 and (ordered_users is None or ordered_users[i - 1] == ordered_users[i]):
+            nb.append(i - 1)
+        if i < n - 1 and (ordered_users is None or ordered_users[i + 1] == ordered_users[i]):
+            nb.append(i + 1)
+        neighbors.append(nb)
+
+    ordered_progress = time_progress[order]
+    ordered_timestamps = display_timestamps[order]
+    result[PROCESSED_TIME_FIELD] = ordered_progress.tolist()
+    result[PROCESSED_HEIGHT_FIELD] = ordered_z.tolist()
+    result[PROCESSED_NEIGHBORS_FIELD] = neighbors
+    result["_time_progress"] = ordered_progress.tolist()
+    result["_timestamp"] = ordered_timestamps.tolist()
+    result["_sequence"] = list(range(n))
+    result["latitude"] = ordered_y.tolist()
+    result["longitude"] = ordered_x.tolist()
+    result["_dataset_type"] = "time-geography-trajectory"
+    result["_layer_config"] = "trajectory-3d"
+
+    if ordered_users is not None:
+        user_index: dict[str, int] = {}
+        for uid in ordered_users:
+            if uid not in user_index:
+                user_index[uid] = len(user_index)
+        result["_user_id"] = ordered_users.tolist()
+        result["color_rgba"] = [_color_for_user_index(user_index[uid]) for uid in ordered_users]
+
+    if align:
+        result["_elapsed_ms"] = np.rint(t_seconds[order] * 1000.0).astype(np.int64).tolist()
+
+    return result
 
 
 class STKDETool(BaseTool):
@@ -477,23 +562,30 @@ class STKDETool(BaseTool):
             else:
                 outputs.append(gpd.GeoDataFrame(geometry=[], crs="EPSG:4326"))
 
-        # Optional 3D trajectory overlay: reuse the time-geography tool so the
-        # path styling, per-user coloring and time→Z mapping match a standalone
-        # trajectory run (frontend stkde-tool showTrajectory).
+        # Optional 3D trajectory overlay: keep the STKDE grid's own Z scale and
+        # slice model so the path lines up with the density slabs.
         if opts.showTrajectory:
-            from .time_geography import TimeGeographyTool
-
-            traj_outputs = TimeGeographyTool().execute(
-                pts,
-                {
-                    "userIdField": user_field,
-                    "alignUserTime": opts.alignUserTime,
-                    "show2D": False,
-                    "visualizeStay": False,
-                },
-                {"time": time_field},
+            t_min_s = float(t_seconds.min())
+            t_max_s = float(t_seconds.max())
+            if slice_edges_s is not None:
+                overlay_edges_s = slice_edges_s
+            elif t_max_s > t_min_s:
+                overlay_edges_s = np.linspace(t_min_s, t_max_s, n_time_slices + 1)
+            else:
+                overlay_edges_s = np.array([t_min_s, t_min_s + 1.0], dtype=np.float64)
+            outputs.append(
+                _build_stkde_trajectory_overlay(
+                    pts,
+                    x,
+                    y,
+                    t_epoch_ms,
+                    t_seconds,
+                    t_min_ms,
+                    user_field,
+                    align,
+                    total_height,
+                    overlay_edges_s,
+                )
             )
-            if traj_outputs:
-                outputs.append(traj_outputs[0])
 
         return outputs

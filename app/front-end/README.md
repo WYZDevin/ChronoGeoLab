@@ -5,7 +5,7 @@ React, TypeScript, Vite, Redux, deck.gl, and maplibre-gl frontend for space-time
 ## What It Does
 
 - Upload and manage GeoJSON/CSV trajectory datasets.
-- Run browser-side analysis tools, with optional backend execution when the Flask API is available.
+- Send analysis jobs to the required local Flask API and normalize its results.
 - Render 2D and 3D spatial outputs with deck.gl layers on a maplibre basemap.
 - Animate time-aware outputs such as trajectories, STKDE, space-time cubes, prisms, and temporal road-network slices.
 
@@ -16,17 +16,25 @@ npm install
 npm run dev
 ```
 
-The Vite app defaults to `http://localhost:5173`.
+The Vite app defaults to `http://localhost:5173`. In another terminal, start the
+analysis API:
+
+```bash
+cd ../back-end
+uv sync
+uv run flask --app app run -p 8000
+```
 
 Optional environment variables can be placed in `.env`:
 
 ```bash
-VITE_APP_MODE=frontend
 VITE_BACKEND_URL=http://localhost:8000
-VITE_MAPBOX_TOKEN=
+VITE_MAPBOX_API_KEY=
 ```
 
-`VITE_MAPBOX_TOKEN` is only needed for the Mapbox satellite style. Without it, the satellite map falls back to Esri raster tiles.
+`VITE_MAPBOX_API_KEY` is only needed for the Mapbox satellite style. The legacy
+`VITE_MAPBOX_TOKEN` name is also accepted. Without either, the satellite map
+falls back to Esri raster tiles.
 
 ## Verification
 
@@ -36,7 +44,8 @@ npm test
 npx playwright test
 ```
 
-The Playwright tests start the Vite dev server automatically unless one is already running on `http://localhost:5173`.
+The Playwright tests start both Vite and Flask automatically unless those servers
+are already running on ports `5173` and `8000`.
 
 ## Key Directories
 

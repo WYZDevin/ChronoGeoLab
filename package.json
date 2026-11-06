@@ -1,8 +1,8 @@
 {
   "name": "chronogeolab",
-  "version": "1.0.0",
-  "description": "A geospatial analysis platform built with [deck.gl](https://deck.gl/) for space-time trajectory analysis. Upload CSV data, run analysis tools in the browser or on an optional server, and visualize results on an interactive map.",
-  "main": "index.js",
+  "private": true,
+  "version": "1.0.1",
+  "description": "A local geospatial analysis platform for space-time trajectory analysis with React, deck.gl, and a Flask/GeoPandas backend.",
   "scripts": {
     "dev": "./dev.sh",
     "dev:frontend": "npm --prefix app/front-end run dev",
@@ -17,15 +17,17 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/WYZDevin/ChronoGeoLab/issues"
   },
   "homepage": "https://github.com/WYZDevin/ChronoGeoLab#readme",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
-    "@types/node": "^25.6.0",
+    "@types/node": "^24.10.1",
     "vitepress": "^1.6.3"
   }
 }

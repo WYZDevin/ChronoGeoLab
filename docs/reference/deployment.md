@@ -27,6 +27,20 @@ Published images:
 - `yongzwu/chronogeolab-backend:latest`
 - `yongzwu/chronogeolab-frontend:latest`
 
+### Update an existing installation
+
+Starting an existing container does not check for a newer image. Pull and
+recreate both stateless services to update safely:
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+```
+
+In Docker Desktop, stop and delete the two `cgl-*` containers, pull both images
+again, then recreate the containers with the same ports. No project data is
+stored inside these containers.
+
 ### Configuring the backend URL
 
 The frontend bakes `VITE_BACKEND_URL` at **build time**. To target a different
@@ -43,7 +57,7 @@ or edit the `args` under the `frontend` service in `docker-compose.yml`.
 | Image | Base | Notes |
 |-------|------|-------|
 | Backend | `python:3.12-slim` + `uv` | Installs locked deps, runs Flask. Health-checked on `/api/v1/health`. |
-| Frontend | `node:20` build → `nginx:alpine` | Builds the Vite bundle, serves static files via Nginx. |
+| Frontend | `node:24` build → `nginx:alpine` | Builds the Vite bundle, serves static files via Nginx. |
 
 The frontend `depends_on` the backend's health check, so it only starts once the
 API is ready.

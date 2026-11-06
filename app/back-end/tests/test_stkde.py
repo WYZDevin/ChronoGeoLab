@@ -1,3 +1,5 @@
+import pytest
+
 from app.constants import PROCESSED_HEIGHT_FIELD
 
 
@@ -188,6 +190,97 @@ def test_stkde_show_trajectory(client):
     traj = data["outputs"][3]
     assert traj["features"]
     assert traj["features"][0]["properties"]["_dataset_type"] == "time-geography-trajectory"
+
+
+def test_stkde_trajectory_overlay_uses_density_stack_height(client):
+    """The optional trajectory overlay must use STKDE's padded-grid Z scale,
+    not the standalone trajectory tool's raw-point bounds."""
+    features = []
+    for i in range(12):
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-122.42 + 0.002 * i, 37.77 + 0.001 * i],
+                },
+                "properties": {"timestamp": f"2025-01-15T10:{i * 5:02d}:00Z"},
+            }
+        )
+
+    resp = client.post(
+        "/api/v1/tools/stkde/execute",
+        json={
+            "data": {"type": "FeatureCollection", "features": features},
+            "attributes": {"time": "timestamp"},
+            "options": {"showTrajectory": True, "nTimeSlices": 4},
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+
+    density_feature = next(
+        f
+        for fc in data["outputs"][:3]
+        for f in fc["features"]
+        if fc["features"]
+    )
+    stack_height = density_feature["properties"][PROCESSED_HEIGHT_FIELD] * 4
+    trajectory = data["outputs"][3]
+    heights = [f["properties"][PROCESSED_HEIGHT_FIELD] for f in trajectory["features"]]
+
+    assert min(heights) == pytest.approx(0)
+    assert max(heights) == pytest.approx(stack_height)
+
+
+def test_stkde_trajectory_overlay_uses_stkde_user_time_alignment(client):
+    """Aligned STKDE uses elapsed time from each user's first observation.
+    The trajectory overlay must use that same origin, not midnight of each day."""
+    features = []
+    for user, day, hour, lon_offset in [
+        ("alice", "2025-01-15", 10, 0.0),
+        ("bob", "2025-01-16", 12, 0.02),
+    ]:
+        for i in range(4):
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [-72.25 + lon_offset + 0.001 * i, 41.8 + 0.001 * i],
+                    },
+                    "properties": {
+                        "timestamp": f"{day}T{hour}:{i * 5:02d}:00Z",
+                        "user": user,
+                    },
+                }
+            )
+
+    resp = client.post(
+        "/api/v1/tools/stkde/execute",
+        json={
+            "data": {"type": "FeatureCollection", "features": features},
+            "attributes": {"time": "timestamp"},
+            "options": {
+                "showTrajectory": True,
+                "userIdField": "user",
+                "alignUserTime": True,
+                "nTimeSlices": 3,
+            },
+        },
+    )
+    assert resp.status_code == 200
+    trajectory = resp.get_json()["outputs"][3]
+
+    by_user = {}
+    for feature in trajectory["features"]:
+        by_user.setdefault(feature["properties"]["_user_id"], []).append(feature)
+
+    assert set(by_user) == {"alice", "bob"}
+    for user_features in by_user.values():
+        first = min(user_features, key=lambda f: f["properties"]["_elapsed_ms"])
+        assert first["properties"]["_elapsed_ms"] == 0
+        assert first["properties"][PROCESSED_HEIGHT_FIELD] == pytest.approx(0)
 
 
 def test_stkde_align_user_time(client):

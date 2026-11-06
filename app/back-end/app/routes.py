@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
 
+from . import __version__
 from .models import ErrorResponse, ExecuteRequest, ExecutionMetadata, HealthResponse, ListToolsResponse
 from .tool_registry import registry
 from .utils import build_response, filter_to_research_area, gdf_to_geojson, geojson_to_gdf
@@ -13,7 +14,7 @@ api = Blueprint("api", __name__, url_prefix="/api/v1")
 
 @api.route("/health", methods=["GET"])
 def health() -> Response:
-    return jsonify(HealthResponse(status="healthy", version="1.0.0").model_dump())
+    return jsonify(HealthResponse(status="healthy", version=__version__).model_dump())
 
 
 @api.route("/tools", methods=["GET"])

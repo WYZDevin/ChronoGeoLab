@@ -1,8 +1,7 @@
 """Unit tests for the PPA engine.
 
-Covers the §26 correctness cases from PPA_ESTIMATION.md plus an end-to-end
-smoke test of execute_gps_road_network_anchor_prism with a synthetic
-grid road network.
+Covers the §26 correctness cases from PPA_ESTIMATION.md plus the graph cache,
+padded-extent, and cached-OSM-download helpers used by the two-anchor prism.
 """
 from __future__ import annotations
 
@@ -11,11 +10,8 @@ import math
 import geopandas as gpd
 import numpy as np
 import pytest
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 
-from app.tools.space_time_prism.gps_road_network import (
-    execute_gps_road_network_anchor_prism,
-)
 from app.tools.space_time_prism.ppa_engine import (
     Graph,
     bounded_dijkstra,
@@ -116,7 +112,7 @@ class TestReachableIntervals:
 
 
 # ────────────────────────────────────────────────────────────────────────
-# End-to-end smoke test
+# Shared fixtures
 # ────────────────────────────────────────────────────────────────────────
 
 def _make_grid_road_network() -> dict:
@@ -135,142 +131,6 @@ def _make_grid_road_network() -> dict:
             "highway": "residential",
         })
     return gpd.GeoDataFrame(lines, crs="EPSG:4326").__geo_interface__
-
-
-def _make_gps_trajectory(n: int, t1: int, t2: int):
-    spacing_deg = 0.001
-    lons = np.linspace(0, 5 * spacing_deg, n)
-    lats = np.linspace(0, 5 * spacing_deg, n)
-    ts = np.linspace(t1, t2, n).astype(int)
-    rows = [
-        {"geometry": Point(lons[i], lats[i]), "_timestamp": int(ts[i])}
-        for i in range(n)
-    ]
-    return gpd.GeoDataFrame(rows, crs="EPSG:4326")
-
-
-class TestEndToEnd:
-    """Smoke test the full execute_gps_road_network_anchor_prism pipeline."""
-
-    @pytest.fixture
-    def setup_data(self):
-        spacing_deg = 0.001
-        t1 = 1_700_000_000_000
-        t2 = t1 + 600_000  # 10 min later
-        p1 = {"lng": 0.0, "lat": 0.0, "timestamp": t1, "label": "A"}
-        p2 = {
-            "lng": 5 * spacing_deg, "lat": 5 * spacing_deg,
-            "timestamp": t2, "label": "B",
-        }
-        roads = _make_grid_road_network()
-        gps = _make_gps_trajectory(5, t1, t2)
-        return p1, p2, roads, gps
-
-    def test_returns_three_outputs(self, setup_data):
-        p1, p2, roads, gps = setup_data
-        outputs = execute_gps_road_network_anchor_prism(
-            p1, p2,
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                "roadNetworkData": roads,
-                "maxOrigins": 5,
-            },
-            gdf=gps, time_field="_timestamp",
-        )
-        assert len(outputs) == 3  # PPA roads + origins + anchors
-
-    def test_ppa_roads_have_activity_attrs(self, setup_data):
-        p1, p2, roads, gps = setup_data
-        outputs = execute_gps_road_network_anchor_prism(
-            p1, p2,
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                "roadNetworkData": roads,
-                "maxOrigins": 5,
-            },
-            gdf=gps, time_field="_timestamp",
-        )
-        ppa = outputs[0]
-        assert len(ppa) > 0
-        for col in ("activity_sec_min", "activity_sec_max", "travel_sec_min", "highway"):
-            assert col in ppa.columns
-        # All features must respect A
-        min_activity_sec = 60.0
-        assert (ppa["activity_sec_min"] + 1e-6 >= min_activity_sec).all()
-
-    def test_origins_layer_count_matches_max_origins(self, setup_data):
-        p1, p2, roads, gps = setup_data
-        outputs = execute_gps_road_network_anchor_prism(
-            p1, p2,
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                "roadNetworkData": roads,
-                "maxOrigins": 5,
-            },
-            gdf=gps, time_field="_timestamp",
-        )
-        origins = outputs[1]
-        assert len(origins) == 5
-
-    def test_anchors_layer_has_two_points(self, setup_data):
-        p1, p2, roads, gps = setup_data
-        outputs = execute_gps_road_network_anchor_prism(
-            p1, p2,
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                "roadNetworkData": roads,
-                "maxOrigins": 5,
-            },
-            gdf=gps, time_field="_timestamp",
-        )
-        anchors = outputs[2]
-        assert len(anchors) == 2
-        roles = set(anchors["anchor_role"])
-        assert roles == {"start_anchor", "end_anchor"}
-
-    def test_budget_too_small_yields_no_ppa(self, setup_data):
-        p1, p2, roads, gps = setup_data
-        outputs = execute_gps_road_network_anchor_prism(
-            p1, p2,
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 60,    # 60 min activity
-                "totalBudgetMinutes": 30,    # only 30 min total → T ≤ A
-                "roadNetworkData": roads,
-                "maxOrigins": 5,
-            },
-            gdf=gps, time_field="_timestamp",
-        )
-        # PPA layer should be empty (no reachable roads when T ≤ A)
-        ppa = outputs[0]
-        assert len(ppa) == 0
-
-    def test_no_road_network_emits_empty_ppa_but_keeps_origins(self, setup_data):
-        p1, p2, _roads, gps = setup_data
-        outputs = execute_gps_road_network_anchor_prism(
-            p1, p2,
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                # roadNetworkData omitted; explicit opt-out of OSM auto-download
-                "autoDownloadOSM": False,
-                "maxOrigins": 5,
-            },
-            gdf=gps, time_field="_timestamp",
-        )
-        assert len(outputs) == 3
-        assert len(outputs[0]) == 0       # PPA empty
-        assert len(outputs[1]) > 0        # origins still emitted
-        assert len(outputs[2]) == 2       # anchors still emitted
 
 
 # ────────────────────────────────────────────────────────────────────────
@@ -386,138 +246,6 @@ class TestGraphCache:
 
 
 # ────────────────────────────────────────────────────────────────────────
-# Per-origin dwell-time summary on the origins layer
-# ────────────────────────────────────────────────────────────────────────
-
-class TestOriginDwellSummary:
-    """Each GPS origin point in the API response carries its dwell-time summary."""
-
-    @pytest.fixture
-    def outputs(self):
-        spacing_deg = 0.001
-        t1 = 1_700_000_000_000
-        t2 = t1 + 600_000
-        p1 = {"lng": 0.0, "lat": 0.0, "timestamp": t1, "label": "A"}
-        p2 = {
-            "lng": 5 * spacing_deg, "lat": 5 * spacing_deg,
-            "timestamp": t2, "label": "B",
-        }
-        return execute_gps_road_network_anchor_prism(
-            p1, p2,
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                "roadNetworkData": _make_grid_road_network(),
-                "maxOrigins": 5,
-            },
-            gdf=_make_gps_trajectory(5, t1, t2),
-            time_field="_timestamp",
-        )
-
-    def test_origin_layer_has_dwell_attributes(self, outputs):
-        origins = outputs[1]
-        for col in (
-            "total_budget_sec", "min_activity_sec", "cutoff_sec",
-            "dwell_sec_at_origin", "dwell_sec_max", "dwell_sec_min", "dwell_sec_mean",
-            "activity_sec_at_origin", "activity_sec_max", "activity_sec_min", "activity_sec_mean",
-            "ppa_reachable_segments", "ppa_reachable_length_m",
-            "snap_distance_m", "reachable", "origin_index",
-        ):
-            assert col in origins.columns, f"missing column: {col}"
-
-    def test_origin_dwell_at_origin_equals_total_budget(self, outputs):
-        """At the origin itself travel time is 0, so dwell = T."""
-        origins = outputs[1]
-        T_min = 5  # totalBudgetMinutes
-        expected_T_sec = T_min * 60.0
-        for v in origins["dwell_sec_at_origin"]:
-            assert abs(float(v) - expected_T_sec) < 1e-6
-
-    def test_origin_dwell_min_respects_min_activity(self, outputs):
-        """dwell_sec_min on every origin must be ≥ user-supplied A."""
-        origins = outputs[1]
-        A_sec = 1 * 60.0
-        for v in origins["dwell_sec_min"]:
-            assert float(v) >= A_sec - 1e-6
-
-    def test_origin_dwell_aliases_match(self, outputs):
-        """dwell_sec_* and activity_sec_* must be identical aliases."""
-        origins = outputs[1]
-        for col in ("at_origin", "max", "min", "mean"):
-            d = origins[f"dwell_sec_{col}"].astype(float)
-            a = origins[f"activity_sec_{col}"].astype(float)
-            assert (d - a).abs().max() < 1e-9
-
-    def test_segment_features_have_dwell_aliases(self, outputs):
-        """The per-segment PPA features also expose dwell_sec_* aliases."""
-        ppa = outputs[0]
-        for col in ("dwell_sec_min", "dwell_sec_mid", "dwell_sec_max"):
-            assert col in ppa.columns
-
-    def test_segment_geometry_has_z(self, outputs):
-        """Every PPA segment must carry a Z coordinate matching its origin's z_base.
-
-        This is what makes the deck.gl LineLayer draw the road at the trajectory's
-        altitude rather than flat at z=0.
-        """
-        ppa = outputs[0]
-        if len(ppa) == 0:
-            pytest.skip("no PPA segments produced")
-        for _, row in ppa.iterrows():
-            geom = row.geometry
-            assert geom.has_z, "PPA LineString must carry a Z coordinate"
-            coords = list(geom.coords)
-            # Both endpoints sit at z_base (= time_progress × total_height)
-            assert all(len(c) == 3 for c in coords)
-            assert all(abs(c[2] - float(row["z"])) < 1e-9 for c in coords)
-
-    def test_segment_has_color_rgba(self, outputs):
-        """Each PPA segment should carry an [r, g, b, a] tuple the LineLayer can use."""
-        ppa = outputs[0]
-        if len(ppa) == 0:
-            pytest.skip("no PPA segments produced")
-        assert "color_rgba" in ppa.columns
-        for rgba in ppa["color_rgba"]:
-            assert isinstance(rgba, list) and len(rgba) == 4
-            for v in rgba:
-                assert 0 <= int(v) <= 255
-
-    def test_origin_links_back_via_origin_index(self, outputs):
-        """Every origin_index in the PPA layer must exist in the origins layer."""
-        ppa = outputs[0]
-        origins = outputs[1]
-        if len(ppa) == 0:
-            pytest.skip("no PPA segments")
-        ppa_indices = set(int(v) for v in ppa["origin_index"])
-        origin_indices = set(int(v) for v in origins["origin_index"])
-        assert ppa_indices.issubset(origin_indices)
-
-    def test_unreachable_origins_marked_when_no_road_network(self):
-        """When there is no road network, every origin point must have reachable=False."""
-        t1 = 1_700_000_000_000
-        t2 = t1 + 600_000
-        outputs = execute_gps_road_network_anchor_prism(
-            {"lng": 0.0, "lat": 0.0, "timestamp": t1, "label": "A"},
-            {"lng": 0.005, "lat": 0.005, "timestamp": t2, "label": "B"},
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                "autoDownloadOSM": False,
-                "maxOrigins": 5,
-            },
-            gdf=_make_gps_trajectory(5, t1, t2),
-            time_field="_timestamp",
-        )
-        origins = outputs[1]
-        assert len(origins) > 0
-        assert all(v is False or int(v) == 0 for v in origins["reachable"])
-        # Budget params must still be echoed
-        assert all(abs(float(v) - 300.0) < 1e-6 for v in origins["total_budget_sec"])
-
-
-# ────────────────────────────────────────────────────────────────────────
 # §6 / §21 — padded extent + OSM auto-download
 # ────────────────────────────────────────────────────────────────────────
 
@@ -618,78 +346,3 @@ class TestOSMCache:
             (-0.01, -0.01, 0.02, 0.02), "walking", fetch_fn=bad_fetch,
         )
         assert out is None
-
-
-class TestAutoDownloadIntegration:
-    """End-to-end: when no roadNetworkData is given but autoDownloadOSM=True,
-    the engine should fetch from OSM through our cached helper."""
-
-    def setup_method(self):
-        from app.tools.space_time_prism.ppa_engine.extent import clear_osm_cache
-        clear_osm_cache()
-
-    def test_auto_download_path_invoked(self, monkeypatch):
-        # Monkey-patch the underlying Overpass fetcher used by the cache
-        roads_fc = _make_grid_road_network()
-
-        def fake_fetch(bbox, buffer_deg=0.0, mode=None):
-            return gpd.GeoDataFrame.from_features(
-                roads_fc["features"], crs="EPSG:4326",
-            )
-
-        # Patch the module-level reference used by extent.fetch_or_cache_osm_roads
-        from app.tools.space_time_prism import road_network as rn
-        monkeypatch.setattr(rn, "_fetch_osm_roads", fake_fetch)
-
-        t1 = 1_700_000_000_000
-        t2 = t1 + 600_000
-        outputs = execute_gps_road_network_anchor_prism(
-            {"lng": 0.0, "lat": 0.0, "timestamp": t1, "label": "A"},
-            {"lng": 0.005, "lat": 0.005, "timestamp": t2, "label": "B"},
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                # roadNetworkData omitted intentionally
-                "autoDownloadOSM": True,
-                "maxOrigins": 5,
-            },
-            gdf=_make_gps_trajectory(5, t1, t2),
-            time_field="_timestamp",
-        )
-        # The PPA layer should now have features even though we never passed roads in
-        assert len(outputs[0]) > 0
-        # Origins should be marked reachable now that we have a network
-        origins = outputs[1]
-        assert any(bool(v) for v in origins["reachable"])
-
-    def test_auto_download_disabled_yields_empty(self, monkeypatch):
-        # Even if Overpass would respond, autoDownloadOSM=False suppresses it
-        called = {"n": 0}
-
-        def fake_fetch(bbox, buffer_deg=0.0):
-            called["n"] += 1
-            return gpd.GeoDataFrame.from_features(
-                _make_grid_road_network()["features"], crs="EPSG:4326",
-            )
-
-        from app.tools.space_time_prism import road_network as rn
-        monkeypatch.setattr(rn, "_fetch_osm_roads", fake_fetch)
-
-        t1 = 1_700_000_000_000
-        t2 = t1 + 600_000
-        outputs = execute_gps_road_network_anchor_prism(
-            {"lng": 0.0, "lat": 0.0, "timestamp": t1, "label": "A"},
-            {"lng": 0.005, "lat": 0.005, "timestamp": t2, "label": "B"},
-            options={
-                "speedMode": "walking",
-                "minActivityMinutes": 1,
-                "totalBudgetMinutes": 5,
-                "autoDownloadOSM": False,
-                "maxOrigins": 5,
-            },
-            gdf=_make_gps_trajectory(5, t1, t2),
-            time_field="_timestamp",
-        )
-        assert called["n"] == 0
-        assert len(outputs[0]) == 0

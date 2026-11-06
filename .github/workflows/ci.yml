@@ -8,7 +8,7 @@ on:
 
 jobs:
   frontend:
-    name: Frontend (lint + typecheck + test)
+    name: Frontend (lint + build + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,14 +18,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: app/front-end/package-lock.json
 
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc -b --noEmit
-      - run: npx vitest run --reporter=verbose
+      - run: npm run build
+      - run: npm test -- --reporter=verbose
 
   backend:
     name: Backend (lint + test)
@@ -53,3 +53,35 @@ jobs:
         run: uv run ruff format --check .
         continue-on-error: true
       - run: uv run pytest tests/ -v
+
+  e2e:
+    name: User workflow (frontend + backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/front-end/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: app/front-end
+      - name: Install backend dependencies
+        run: uv sync --all-extras
+        working-directory: app/back-end
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: app/front-end
+      - name: Run user workflow tests
+        run: npx playwright test
+        working-directory: app/front-end

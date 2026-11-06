@@ -4,7 +4,7 @@
 # architecture-independent, so building under cross-arch emulation only buys us
 # slowness and the npm optional-deps bug (missing @rollup/rollup-*). The final
 # nginx stage below is still per-target-arch.
-FROM --platform=$BUILDPLATFORM node:20-alpine AS build
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci

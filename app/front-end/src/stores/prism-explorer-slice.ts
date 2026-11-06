@@ -24,23 +24,12 @@ export interface PrismParams {
   speedAdjustment: 'off' | 'auto' | 'manual';
   /** Real speed = factor × profile speed (used when speedAdjustment='manual'). */
   speedFactor: number;
-  // PPA road-network mode (gps-road-network):
-  // T (totalBudgetMinutes) — total time budget per GPS origin
-  // A (minActivityMinutes) — reused above; minimum activity time at destination
-  // maxOrigins             — cap on GPS points sampled between anchors
+  /**
+   * Optional total-time-budget override (minutes) for the road-network prism.
+   * When set, it replaces the default T = t_B − t_A derived from the two
+   * anchor timestamps.
+   */
   totalBudgetMinutes: number;
-  maxOrigins: number;
-  /**
-   * Merge consecutive GPS samples whose locations stay within this radius
-   * (metres) into a single PPA at the cluster centroid. 0 disables merging.
-   */
-  clusterRadiusMeters: number;
-  /**
-   * Per-origin cap on emitted reachable road segments — sorted by dwell
-   * time (closest to origin first) and the lowest-dwell fringe is dropped
-   * when the count exceeds the cap. 0 disables the cap.
-   */
-  maxSegmentsPerOrigin: number;
 }
 
 interface PrismExplorerState {
@@ -73,9 +62,6 @@ const initialState: PrismExplorerState = {
     speedAdjustment: 'off',
     speedFactor: 0.7,
     totalBudgetMinutes: 30,
-    maxOrigins: 30,
-    clusterRadiusMeters: 50,
-    maxSegmentsPerOrigin: 300,
   },
   ownedDatasetIds: [],
   ownedLayerIds: [],

@@ -22,7 +22,61 @@ env:
   VITE_BACKEND_URL: ${{ vars.VITE_BACKEND_URL || 'http://localhost:8000' }}
 
 jobs:
+  validate:
+    name: Validate release candidate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/front-end/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: app/front-end
+      - name: Build frontend
+        run: npm run build
+        working-directory: app/front-end
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: app/front-end
+      - name: Test frontend
+        run: npm test
+        working-directory: app/front-end
+
+      - name: Install backend dependencies
+        run: uv sync --all-extras
+        working-directory: app/back-end
+      - name: Test backend
+        run: uv run pytest tests/ -v
+        working-directory: app/back-end
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+        working-directory: app/front-end
+      - name: Test user workflow
+        run: npx playwright test
+        working-directory: app/front-end
+
+      - name: Install documentation dependencies
+        run: npm ci
+      - name: Build documentation
+        run: npm run docs:build
+
   publish:
+    needs: validate
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -55,7 +109,8 @@ jobs:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern=v{{version}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=raw,value=${{ inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push ${{ matrix.name }}

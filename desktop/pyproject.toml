@@ -1,0 +1,16 @@
+[project]
+name = "chronogeolab-desktop"
+version = "1.0.1"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "chronogeolab-backend",
+    "pywebview>=5.4,<7",
+    "waitress>=3.0.2,<4",
+    "pyinstaller>=6.16,<7",
+]
+
+[tool.uv.sources]
+chronogeolab-backend = { path = "../app/back-end" }
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.4"]

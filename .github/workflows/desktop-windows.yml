@@ -1,0 +1,29 @@
+name: Windows desktop bundle
+
+on:
+  push:
+    branches: ['codex/windows-desktop-*']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/front-end/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --project desktop --locked --python 3.12
+      - run: uv run --project desktop --locked pytest desktop/tests -v
+      - run: uv run --project desktop --locked python desktop/build.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChronoGeoLab-Windows-x64
+          path: desktop/dist/*.zip
+          if-no-files-found: error

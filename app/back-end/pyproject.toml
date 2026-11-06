@@ -1,6 +1,6 @@
 [project]
 name = "chronogeolab-backend"
-version = "1.0.0"
+version = "1.0.1"
 description = "Stateless Flask API for space-time geospatial analysis tools"
 requires-python = ">=3.12"
 dependencies = [

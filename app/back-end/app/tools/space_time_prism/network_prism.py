@@ -10,8 +10,8 @@ area (PPA) and the 3-D time-sliced prism on the road network:
 The computation is two bounded Dijkstra searches over a shared road graph — one
 forward from A, one backward from B — followed by a per-edge intersection of the
 two cones (see ``ppa_engine/two_anchor.py``). This replaces the old per-GPS-point
-``gps_road_network`` model, where the two anchors only bounded a sampling window
-and each GPS point produced its own single-cone round-trip PPA.
+model, where the two anchors only bounded a sampling window and each GPS point
+produced its own single-cone round-trip PPA.
 
 Outputs:
     [0] ppa-road-network   — reachable road segments stacked per time slice,
@@ -30,21 +30,17 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 from time import perf_counter
 from typing import Any
 
 import geopandas as gpd
 import numpy as np
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 
 from ...constants import PROCESSED_HEIGHT_FIELD
 from .dwell_surface import dwell_surface_gdf
 from .road_network import _auto_utm_crs, _parse_timestamps
-from .gps_road_network import (
-    _anchors_gdf,
-    _empty_gdf,
-    _load_road_network_gdf,
-)
 from .ppa_engine import (
     bounded_dijkstra,
     extent_area_km2,
@@ -399,7 +395,7 @@ def _trajectory_points(
     ]
 
 
-# Sequential blue→red dwell ramp (matches gps_road_network._DWELL_RAMP), as a
+# Sequential blue→red dwell ramp (low activity = cool, high = warm), as a
 # (5, 3) array for vectorised interpolation.
 _RAMP = np.array(
     [(44, 123, 182), (171, 217, 233), (255, 255, 191), (253, 174, 97), (215, 25, 28)],
@@ -618,3 +614,62 @@ def _anchor_ellipse_bbox(
     d_lng = hx / (111_320.0 * cos_lat)
     d_lat = hy / 111_320.0
     return (mid_lng - d_lng, mid_lat - d_lat, mid_lng + d_lng, mid_lat + d_lat)
+
+
+def _load_road_network_gdf(options: dict[str, Any]) -> gpd.GeoDataFrame | None:
+    """Resolve a WGS84 road-network GeoDataFrame from inline data or a file path."""
+    rn_data = options.get("roadNetworkData")
+    rn_path = str(options.get("roadNetworkPath") or "")
+
+    roads: gpd.GeoDataFrame | None = None
+    if rn_data and isinstance(rn_data, dict):
+        roads = gpd.GeoDataFrame.from_features(
+            rn_data.get("features", []), crs="EPSG:4326",
+        )
+    elif rn_path and os.path.exists(rn_path):
+        roads = gpd.read_file(rn_path)
+
+    if roads is None or roads.empty:
+        return None
+    if roads.crs is None:
+        roads = roads.set_crs("EPSG:4326")
+    else:
+        roads = roads.to_crs("EPSG:4326")
+    roads = roads[roads.geometry.notna() & ~roads.geometry.is_empty]
+    roads = roads[roads.geometry.geom_type.isin(["LineString", "MultiLineString"])].copy()
+    return roads if not roads.empty else None
+
+
+def _empty_gdf() -> gpd.GeoDataFrame:
+    return gpd.GeoDataFrame(
+        {"geometry": [], "_dataset_type": []}, crs="EPSG:4326",
+    )
+
+
+def _anchors_gdf(
+    p1: dict, p2: dict, t1: int, t2: int, z_a: float, z_b: float,
+) -> gpd.GeoDataFrame:
+    """Anchor A and B placed at the trajectory-aligned Z heights."""
+    rows = [
+        {
+            "geometry": Point(float(p1["lng"]), float(p1["lat"]), float(z_a)),
+            "_timestamp": float(t1),
+            "_time_progress": 0.0,
+            PROCESSED_HEIGHT_FIELD: float(z_a),
+            "z": float(z_a),
+            "anchor_role": "start_anchor",
+            "anchor_label": p1.get("label", "Anchor A"),
+            "_dataset_type": "prism-anchors",
+        },
+        {
+            "geometry": Point(float(p2["lng"]), float(p2["lat"]), float(z_b)),
+            "_timestamp": float(t2),
+            "_time_progress": 1.0,
+            PROCESSED_HEIGHT_FIELD: float(z_b),
+            "z": float(z_b),
+            "anchor_role": "end_anchor",
+            "anchor_label": p2.get("label", "Anchor B"),
+            "_dataset_type": "prism-anchors",
+        },
+    ]
+    return gpd.GeoDataFrame(rows, crs="EPSG:4326")

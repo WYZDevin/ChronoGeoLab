@@ -24,10 +24,10 @@ docker login                                   # authenticate to Docker Hub
 ./scripts/docker-publish.sh
 
 # Push a specific version tag
-./scripts/docker-publish.sh v1.2.0
+./scripts/docker-publish.sh v1.0.1
 
 # Push under a different Docker Hub account
-IMAGE_NAMESPACE=myorg ./scripts/docker-publish.sh v1.2.0
+IMAGE_NAMESPACE=myorg ./scripts/docker-publish.sh v1.0.1
 ```
 
 Useful overrides (environment variables):
@@ -49,7 +49,7 @@ Useful overrides (environment variables):
 `.github/workflows/docker-publish.yml` builds and pushes both images automatically.
 
 **Triggers**
-- Pushing a tag matching `v*` (e.g. `git tag v1.2.0 && git push origin v1.2.0`) — publishes that semver tag plus `latest`.
+- Pushing a tag matching `v*` (e.g. `git tag v1.0.1 && git push origin v1.0.1`) — validates the backend, frontend, docs, and user workflow before publishing `1.0.1`, `v1.0.1`, and `latest`.
 - Manual run from the **Actions** tab (`workflow_dispatch`), with an optional tag input.
 
 **Required repository secrets** (Settings → Secrets and variables → Actions):
@@ -74,7 +74,14 @@ Useful overrides (environment variables):
 docker compose -f docker-compose.prod.yml up -d
 
 # Pin a namespace / tag
-IMAGE_NAMESPACE=myorg IMAGE_TAG=v1.2.0 docker compose -f docker-compose.prod.yml up -d
+IMAGE_NAMESPACE=myorg IMAGE_TAG=v1.0.1 docker compose -f docker-compose.prod.yml up -d
 ```
 
 The frontend is exposed on `http://localhost:5173`, the backend on `http://localhost:8000`. The frontend waits for the backend's healthcheck before starting.
+
+To update an existing Compose installation, pull and recreate both services:
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+```

@@ -4,11 +4,11 @@
 
 **An open toolkit for time‑geographic visualization, space‑time analysis, and mobility‑based exposure research.**
 
-Upload trajectory data, run space‑time analyses in your browser, and explore the results on an interactive 3D map — no coding required.
+Upload trajectory data, run space‑time analyses locally, and explore the results on an interactive 3D map — no coding required.
 
 [![Documentation](https://img.shields.io/badge/docs-online-2563eb)](https://wyzdevin.github.io/ChronoGeoLab/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-eab308.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-16a34a)](https://github.com/WYZDevin/ChronoGeoLab/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-16a34a)](https://github.com/WYZDevin/ChronoGeoLab/releases)
 [![Built with deck.gl](https://img.shields.io/badge/built%20with-deck.gl-000000)](https://deck.gl/)
 
 📖 [Documentation](https://wyzdevin.github.io/ChronoGeoLab/) · 🚀 [Getting Started](https://wyzdevin.github.io/ChronoGeoLab/guide/getting-started) · 🧭 [Tools](https://wyzdevin.github.io/ChronoGeoLab/tools/)
@@ -28,9 +28,9 @@ interpretable time‑geography visualizations. It's built for researchers, stude
 and analysts studying human mobility, activity spaces, and environmental exposure:
 bring a trajectory, pick a tool, and read the result on an interactive 3D map.
 
-The app runs locally in your browser, backed by an optional Python service for
-heavier server‑side computation. The recommended Docker setup starts both together
-with a single command.
+The app runs locally as a React interface plus a Python analysis service. In the
+current release every analysis tool requires that backend; the recommended Docker
+setup starts both services with a single command.
 
 ## Features
 
@@ -108,6 +108,22 @@ Columns are auto‑detected on upload. See
 the full format reference, and [`demo-datasets/`](demo-datasets/) for more samples
 (individual days and a 30‑user synthetic set).
 
+### Privacy and network access
+
+In the standard local setup, analysis data travels between your browser and the
+local Flask service. The app still requests basemap tiles from CARTO, Esri, or
+Mapbox, and road-network prisms can query public OpenStreetMap Overpass services
+for the selected area. The individual demo traces contain precise real-world
+coordinates and timestamps; treat them as sensitive and confirm appropriate
+permission before redistributing them.
+
+## Windows desktop preview
+
+The pywebview + PyInstaller configuration bundles the React interface and Python
+analysis API into a portable desktop folder. See the [desktop build guide](desktop/README.md)
+for Windows build commands, WebView2 requirements, and validation steps. Windows GUI
+validation is still required before distribution.
+
 ## Run locally (development)
 
 Requires **Node.js** (version pinned in `package.json`), **Python ≥ 3.12**, and
@@ -122,7 +138,7 @@ npm install
 npm run dev                    # Vite dev server → http://localhost:5173
 ```
 
-**Backend** (optional — enables server‑side execution for heavier runs)
+**Backend** (required for analysis in this release)
 
 ```bash
 cd app/back-end
@@ -131,8 +147,8 @@ uv run flask --app app run -p 8000     # start Flask → http://localhost:8000
 uv run pytest tests/                   # run the test suite
 ```
 
-The frontend detects the backend via `/api/v1/health` and enables server‑side
-execution when it's available.
+The frontend detects the backend via `/api/v1/health`. You can browse the interface
+without it, but analysis tools remain disabled until the API is available.
 
 <details>
 <summary><b>Architecture &amp; tech stack</b></summary>
@@ -141,9 +157,7 @@ execution when it's available.
 flowchart TD
     subgraph Frontend ["Frontend (React + deck.gl)"]
         CSV["CSV / GeoJSON upload"] --> Resolver["ExecutionResolver"]
-        Resolver -->|frontend| FE["tool.analyze() (Turf.js / Web Worker)"]
-        Resolver -->|backend| API["backendApiService (HTTP)"]
-        FE --> Results["AnalysisResult"]
+        Resolver --> API["backendApiService (HTTP)"]
         API --> Norm["backend-normalizer"] --> Results
         Results --> DeckMap["deck.gl + maplibre map"]
     end
@@ -160,7 +174,7 @@ flowchart TD
 | UI | React 18 + TypeScript, Vite 6, Tailwind CSS 4, Radix UI / shadcn/ui |
 | Map | deck.gl 9, react‑map‑gl 7, maplibre‑gl 4 |
 | State | Redux Toolkit |
-| Geospatial (browser) | Turf.js 7 |
+| Geospatial (browser fallback, currently disabled) | Turf.js 7 |
 | Backend | Flask 3, geopandas 1.x, Shapely 2, SciPy |
 | Tooling (Python) | uv |
 
@@ -217,7 +231,7 @@ derivative software, please cite it (see [`CITATION.cff`](CITATION.cff)):
   author  = {Wu, Devin Yongzhao and Wang, Jue},
   title   = {ChronoGeoLab: An open toolkit for time-geographic visualization,
              space-time analysis, and mobility-based exposure research},
-  version = {1.0.0},
+  version = {1.0.1},
   year    = {2026},
   note    = {Computer software},
   url     = {https://github.com/WYZDevin/ChronoGeoLab/}

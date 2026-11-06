@@ -60,8 +60,25 @@ docker run -d --name cgl-frontend -p 5173:80 yongzwu/chronogeolab-frontend:lates
 ::: tip 首次启动较慢
 首次启动需要下载镜像，可能耗时几分钟。如果看到
 **"name is already in use"**，说明容器已经存在——请改为在
-**Containers** 标签页中启动它。
+**Containers** 标签页中启动它。如果要安装新版本，请按下面的更新步骤操作，
+不要只重启旧容器。
 :::
+
+### 更新已有安装
+
+即使 `latest` 镜像已经更新，Docker 也不会自动替换现有容器。在 Docker Desktop
+中停止并删除 `cgl-backend` 和 `cgl-frontend`，重新拉取两个镜像，再用相同端口
+重复方案 A。容器本身不保存状态，删除容器不会删除你上传的数据集或项目文件。
+
+也可以在终端中拉取镜像并重建两个容器：
+
+```bash
+docker pull yongzwu/chronogeolab-backend:latest
+docker pull yongzwu/chronogeolab-frontend:latest
+docker rm -f cgl-backend cgl-frontend
+docker run -d --name cgl-backend -p 8000:8000 yongzwu/chronogeolab-backend:latest
+docker run -d --name cgl-frontend -p 5173:80 yongzwu/chronogeolab-frontend:latest
+```
 
 ## 第 3 步——打开应用
 
@@ -85,6 +102,9 @@ docker run -d --name cgl-frontend -p 5173:80 yongzwu/chronogeolab-frontend:lates
 
    ![上传数据](/getting-started/data-source.png)
    ![映射坐标列](/getting-started/map-columns.png)
+
+   内置的个人示例包含精确的真实坐标和时间戳。请将其视为敏感数据；
+   在重新分发或展示可识别地点之前，请确认已获得适当授权。
 
 2. **选择工具。** 在 **Select Analysis Tool**（选择分析工具）界面中，
    选择 **3D Trajectory**。

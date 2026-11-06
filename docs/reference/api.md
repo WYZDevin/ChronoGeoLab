@@ -1,7 +1,8 @@
 # Backend API
 
-The optional Flask backend exposes a small REST API. All endpoints are prefixed
-with `/api/v1` and default to `http://localhost:8000`.
+The Flask analysis backend exposes a small REST API. It is required by every
+analysis tool in the current release. All endpoints are prefixed with `/api/v1`
+and default to `http://localhost:8000`.
 
 ## Endpoints
 
@@ -14,7 +15,7 @@ with `/api/v1` and default to `http://localhost:8000`.
 ### `GET /api/v1/health`
 
 ```json
-{ "status": "healthy", "version": "1.0.0" }
+{ "status": "healthy", "version": "1.0.1" }
 ```
 
 ### `GET /api/v1/tools`

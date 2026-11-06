@@ -13,8 +13,8 @@ authors:
   - family-names: Wang
     given-names: Jue
     affiliation: GISPark Lab
-version: 1.0.0
-date-released: '2026-07-14'
+version: 1.0.1
+date-released: '2026-07-22'
 license: MIT
 repository-code: 'https://github.com/WYZDevin/ChronoGeoLab'
 url: 'https://github.com/WYZDevin/ChronoGeoLab'

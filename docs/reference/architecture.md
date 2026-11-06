@@ -9,8 +9,10 @@ app/
   back-end/    # Flask API (Python, GeoPandas)
 ```
 
-The frontend works fully offline; the backend is optional and additive. The two
-share no code — the **HTTP API contract is the only boundary**.
+The frontend and backend share no code — the **HTTP API contract is the only
+boundary**. In v1.0.1 every analysis tool is temporarily `backend_only`, so the
+frontend can load without the API but cannot run an analysis. Browser
+implementations remain in the source for a future policy change.
 
 ## Tech stack
 
@@ -34,7 +36,9 @@ Every tool declares an **execution policy** that controls where it can run:
 
 The UI resolves the *effective* modes by combining three facts: does the frontend
 registry have the tool, is the backend online, and does the backend advertise the
-tool. A mode toggle appears only when a real choice exists.
+tool. A mode toggle appears only when a real choice exists. All tools currently
+resolve to `backend_only`; the other policies document the supported architecture
+and remain covered by resolver tests.
 
 ## End-to-end data flow
 

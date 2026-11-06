@@ -4,11 +4,11 @@
 
 **一个面向时间地理学可视化、时空分析与基于移动性的暴露研究的开源工具箱。**
 
-上传轨迹数据，在浏览器中运行时空分析，并在交互式 3D 地图上探索结果——无需编写任何代码。
+上传轨迹数据，在本地运行时空分析，并在交互式 3D 地图上探索结果——无需编写任何代码。
 
 [![Documentation](https://img.shields.io/badge/docs-online-2563eb)](https://wyzdevin.github.io/ChronoGeoLab/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-eab308.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-16a34a)](https://github.com/WYZDevin/ChronoGeoLab/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-16a34a)](https://github.com/WYZDevin/ChronoGeoLab/releases)
 [![Built with deck.gl](https://img.shields.io/badge/built%20with-deck.gl-000000)](https://deck.gl/)
 
 📖 [文档](https://wyzdevin.github.io/ChronoGeoLab/) · 🚀 [快速上手](https://wyzdevin.github.io/ChronoGeoLab/guide/getting-started.zh) · 🧭 [分析工具](https://wyzdevin.github.io/ChronoGeoLab/tools/)
@@ -28,8 +28,8 @@ ChronoGeoLab 将原始移动数据（**CSV** 或 **GeoJSON** 格式的 GPS 轨�
 学生和分析人员而构建：导入一条轨迹，选择一个工具，即可在交互式 3D 地图上
 解读分析结果。
 
-应用在本地浏览器中运行，并可搭配一个可选的 Python 服务来承担较重的服务端计算。
-推荐的 Docker 方式可用一条命令同时启动两者。
+应用由本地 React 界面和 Python 分析服务组成。当前版本的所有分析工具都需要后端；
+推荐的 Docker 方式可用一条命令同时启动两个服务。
 
 ## 功能特性
 
@@ -106,6 +106,19 @@ ChronoGeoLab 支持读取 **CSV** 和 **GeoJSON**。只有两个字段是必需�
 更多示例数据（单人单日数据及一套 30 位用户的合成数据集）见
 [`demo-datasets/`](demo-datasets/)。
 
+### 隐私与网络访问
+
+在标准本地配置中，分析数据只在浏览器和本地 Flask 服务之间传输。但应用仍会向
+CARTO、Esri 或 Mapbox 请求底图瓦片；道路网络棱柱也可能向公共 OpenStreetMap
+Overpass 服务查询所选区域。个人示例轨迹包含精确的真实坐标和时间戳，请将其视为
+敏感数据，并在重新分发前确认已获得适当授权。
+
+## Windows 桌面试用包
+
+新增 pywebview + PyInstaller 桌面构建配置，支持将界面和 Python 分析服务一起打包，
+接收方无需安装 Python、Node.js 或 Docker。Windows 构建命令、WebView2 要求及
+验收步骤见 [桌面打包指南](desktop/README.md)。目前采用便携文件夹包，Windows 图形界面仍需实机验证。
+
 ## 本地运行（开发模式）
 
 需要 **Node.js**（版本固定在 `package.json` 中）、**Python ≥ 3.12** 以及
@@ -120,7 +133,7 @@ npm install
 npm run dev                    # Vite 开发服务器 → http://localhost:5173
 ```
 
-**后端**（可选——为较重的分析任务启用服务端执行）
+**后端**（当前版本运行分析所必需）
 
 ```bash
 cd app/back-end
@@ -129,7 +142,8 @@ uv run flask --app app run -p 8000     # 启动 Flask → http://localhost:8000
 uv run pytest tests/                   # 运行测试套件
 ```
 
-前端通过 `/api/v1/health` 检测后端，后端可用时会自动启用服务端执行。
+前端通过 `/api/v1/health` 检测后端。没有后端时仍可浏览界面，
+但分析工具会保持禁用状态，直到 API 可用。
 
 <details>
 <summary><b>架构与技术栈</b></summary>
@@ -138,9 +152,7 @@ uv run pytest tests/                   # 运行测试套件
 flowchart TD
     subgraph Frontend ["前端（React + deck.gl）"]
         CSV["CSV / GeoJSON 上传"] --> Resolver["ExecutionResolver"]
-        Resolver -->|frontend| FE["tool.analyze()（Turf.js / Web Worker）"]
-        Resolver -->|backend| API["backendApiService（HTTP）"]
-        FE --> Results["AnalysisResult"]
+        Resolver --> API["backendApiService（HTTP）"]
         API --> Norm["backend-normalizer"] --> Results
         Results --> DeckMap["deck.gl + maplibre 地图"]
     end
@@ -157,7 +169,7 @@ flowchart TD
 | 界面 | React 18 + TypeScript、Vite 6、Tailwind CSS 4、Radix UI / shadcn/ui |
 | 地图 | deck.gl 9、react‑map‑gl 7、maplibre‑gl 4 |
 | 状态管理 | Redux Toolkit |
-| 地理空间计算（浏览器） | Turf.js 7 |
+| 地理空间计算（浏览器备用实现，当前禁用） | Turf.js 7 |
 | 后端 | Flask 3、geopandas 1.x、Shapely 2、SciPy |
 | 工具链（Python） | uv |
 
@@ -211,7 +223,7 @@ ChronoGeoLab 遵循 [AGENTS.md](https://agents.md) 标准，因此大多数编�
   author  = {Wu, Devin Yongzhao and Wang, Jue},
   title   = {ChronoGeoLab: An open toolkit for time-geographic visualization,
              space-time analysis, and mobility-based exposure research},
-  version = {1.0.0},
+  version = {1.0.1},
   year    = {2026},
   note    = {Computer software},
   url     = {https://github.com/WYZDevin/ChronoGeoLab/}

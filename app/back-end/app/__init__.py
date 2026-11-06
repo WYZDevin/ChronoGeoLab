@@ -3,6 +3,8 @@ import logging
 from flask import Flask
 from flask_cors import CORS
 
+__version__ = "1.0.1"
+
 
 def create_app() -> Flask:
     logging.basicConfig(level=logging.INFO, format="%(name)s %(levelname)s: %(message)s")

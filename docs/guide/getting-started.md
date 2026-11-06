@@ -61,8 +61,26 @@ Each command prints a container ID when it succeeds.
 ::: tip First start is slower
 The first start downloads the images and can take a few minutes. If you see
 **"name is already in use"**, the container already exists — start it from the
-**Containers** tab instead.
+**Containers** tab instead. To install a newer release, follow the update steps
+below rather than restarting the old container.
 :::
+
+### Updating an existing installation
+
+Docker does not replace a container just because a newer `latest` image exists.
+In Docker Desktop, stop and delete `cgl-backend` and `cgl-frontend`, pull both
+images again, and repeat Option A with the same ports. The containers are
+stateless, so deleting them does not delete an uploaded dataset or project file.
+
+From a terminal, replace both containers with freshly pulled images:
+
+```bash
+docker pull yongzwu/chronogeolab-backend:latest
+docker pull yongzwu/chronogeolab-frontend:latest
+docker rm -f cgl-backend cgl-frontend
+docker run -d --name cgl-backend -p 8000:8000 yongzwu/chronogeolab-backend:latest
+docker run -d --name cgl-frontend -p 5173:80 yongzwu/chronogeolab-frontend:latest
+```
 
 ## Step 3 — Open the app
 
@@ -87,6 +105,10 @@ build a Space-Time Prism from it.
 
    ![Upload data](/getting-started/data-source.png)
    ![Map columns](/getting-started/map-columns.png)
+
+   The bundled individual sample contains precise real-world coordinates and
+   timestamps. Treat it as sensitive data and confirm appropriate permission
+   before redistributing it or presenting identifiable locations.
 
 2. **Pick a tool.** On the **Select Analysis Tool** screen, choose
    **3D Trajectory**.

@@ -386,21 +386,24 @@ export const PrismExplorerPanel: React.FC = () => {
               Parameters
             </div>
 
-            {/* Prism mode — locked to PPA Road Network while PASTA is
-                disabled. Re-enable the dropdown (drop `disabled` and the
-                PASTA `<option disabled>` flag) when PASTA comes back. */}
-            <label className="block">
-              <span className="text-xs text-gray-600 dark:text-gray-300 mb-1 block">Prism Mode</span>
-              <select
-                value={params.prismMode}
-                onChange={e => dispatch(updateParams({ prismMode: e.target.value }))}
-                disabled
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <option value="road-network-stp">Road-Network Prism (A ↔ B)</option>
-                <option value="pasta" disabled>PASTA – H3 Potential Path Area (disabled)</option>
-              </select>
-            </label>
+            {/* Prism Mode selector hidden: PASTA is disabled, so Road-Network
+                Prism is the only available mode and `params.prismMode` stays at
+                its 'road-network-stp' default. To bring it back when PASTA
+                returns, un-comment the dropdown below and drop the PASTA
+                `<option disabled>` flag.
+
+                <label className="block">
+                  <span className="text-xs text-gray-600 dark:text-gray-300 mb-1 block">Prism Mode</span>
+                  <select
+                    value={params.prismMode}
+                    onChange={e => dispatch(updateParams({ prismMode: e.target.value }))}
+                    className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                  >
+                    <option value="road-network-stp">Road-Network Prism (A ↔ B)</option>
+                    <option value="pasta">PASTA – H3 Potential Path Area</option>
+                  </select>
+                </label>
+            */}
 
             {params.prismMode === 'pasta' ? (
               <PastaParams params={params} dispatch={dispatch} anchorA={anchorA} anchorB={anchorB} />
@@ -408,7 +411,6 @@ export const PrismExplorerPanel: React.FC = () => {
               <PPARoadNetworkParams
                 params={params}
                 dispatch={dispatch}
-                mapDatasets={mapDatasets}
               />
             )}
           </div>
@@ -674,11 +676,9 @@ function PastaParams({
 function PPARoadNetworkParams({
   params,
   dispatch,
-  mapDatasets,
 }: {
   params: PrismParams;
   dispatch: ReturnType<typeof useAppDispatch>;
-  mapDatasets: Record<string, MapDataset>;
 }) {
   return (
     <>
@@ -784,29 +784,33 @@ function PPARoadNetworkParams({
         </label>
       </ParamSection>
 
-      {/* Road network dataset */}
+      {/* Road network — dataset picker disabled; the network is always
+          auto-downloaded from OSM for the prism extent (roadNetworkDatasetId
+          stays ''). To let users pick a loaded road dataset again, restore the
+          <select> over `mapDatasets` below and re-add the `mapDatasets` prop.
+
+          <label className="block">
+            <span className="text-xs text-gray-600 dark:text-gray-300 mb-1 block">
+              Road Network Dataset
+            </span>
+            <select
+              value={params.roadNetworkDatasetId}
+              onChange={e => dispatch(updateParams({ roadNetworkDatasetId: e.target.value }))}
+            >
+              <option value="">Auto-download from OSM</option>
+              {Object.values(mapDatasets)
+                .filter(ds => !ds.id.startsWith('prism-explorer') && !ds.id.startsWith('shared-axes'))
+                .map(ds => (
+                  <option key={ds.id} value={ds.id}>{ds.label}</option>
+                ))
+              }
+            </select>
+          </label>
+      */}
       <ParamSection title="Road network">
-        <label className="block">
-          <span className="text-xs text-gray-600 dark:text-gray-300 mb-1 block">
-            Road Network Dataset
-          </span>
-          <select
-            value={params.roadNetworkDatasetId}
-            onChange={e => dispatch(updateParams({ roadNetworkDatasetId: e.target.value }))}
-            className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-          >
-            <option value="">Auto-download from OSM</option>
-            {Object.values(mapDatasets)
-              .filter(ds => !ds.id.startsWith('prism-explorer') && !ds.id.startsWith('shared-axes'))
-              .map(ds => (
-                <option key={ds.id} value={ds.id}>{ds.label}</option>
-              ))
-            }
-          </select>
-          <span className="text-xs text-gray-400 mt-0.5 block">
-            Pick a loaded road LineString dataset, or leave empty
-          </span>
-        </label>
+        <span className="text-xs text-gray-400 block">
+          Auto-downloaded from OpenStreetMap for the prism extent.
+        </span>
       </ParamSection>
     </>
   );
